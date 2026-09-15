@@ -1,0 +1,99 @@
+{
+    "name": "ugarit/dusk",
+    "description": "Ugarit Dusk provides simple end-to-end testing and browser automation.",
+    "keywords": [
+        "ugarit",
+        "testing",
+        "webdriver"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Muath R Abu Ouda",
+            "email": "muathrabuouda@hotmail.com",
+            "role": "Vision Leader of Ugarit"
+        },
+        {
+            "name": "Taylor Otwell",
+            "email": "taylor@laravel.com",
+            "role": "Original Creator & Primary Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "ext-zip": "*",
+        "guzzlehttp/guzzle": "^7.5|^8.0",
+        "heritage/console": "^1.00.00",
+        "heritage/support": "^1.00.00",
+        "php-webdriver/webdriver": "^1.15.2",
+        "symfony/console": "^6.2|^7.0|^8.0",
+        "symfony/finder": "^6.2|^7.0|^8.0",
+        "symfony/process": "^6.2|^7.0|^8.0",
+        "vlucas/phpdotenv": "^5.2"
+    },
+    "require-dev": {
+        "ugarit/framework": "^1.00.00",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench-core": "^8.19|^9.17|^10.8|^11.0",
+        "phpstan/phpstan": "^1.10",
+        "phpunit/phpunit": "^10.1|^11.0|^12.0.1",
+        "psy/psysh": "^0.11.12|^0.12",
+        "symfony/yaml": "^6.2|^7.0|^8.0"
+    },
+    "suggest": {
+        "ext-pcntl": "Used to gracefully terminate Dusk when tests are running."
+    },
+    "autoload": {
+        "psr-4": {
+            "Ugarit\\Dusk\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Ugarit\\Dusk\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "ugarit": {
+            "providers": [
+                "Ugarit\\Dusk\\DuskServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "audit": {
+            "ignore": [
+                "PKSA-m5cs-t1y6-qpcs",
+                "PKSA-3r5d-mb8f-1qw9",
+                "PKSA-mdq4-51ck-6kdq",
+                "PKSA-8qx3-n5y5-vvnd",
+                "PKSA-w7xr-vk7n-rstm"
+            ]
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "post-autoload-dump": [
+            "@clear",
+            "@prepare"
+        ],
+        "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
+        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "serve": [
+            "@build",
+            "@php vendor/bin/testbench serve"
+        ],
+        "lint": [
+            "@php vendor/bin/phpstan analyse"
+        ],
+        "test": [
+            "@build",
+            "@php vendor/bin/phpunit"
+        ]
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "version": "1.00.00"
+}

@@ -1,0 +1,53 @@
+<?php
+
+namespace Ugarit\Dusk;
+
+use Heritage\Support\Facades\Route;
+use Heritage\Support\ServiceProvider;
+
+class DuskServiceProvider extends ServiceProvider
+{
+    /**
+     * Bootstrap any package services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        if (! $this->app->environment('production')) {
+            Route::group(array_filter([
+                'prefix' => config('dusk.path', '_dusk'),
+                'domain' => config('dusk.domain', null),
+                'middleware' => config('dusk.middleware', 'web'),
+            ]), function () {
+                Route::get('/login/{userId}/{guard?}', [
+                    'uses' => 'Ugarit\Dusk\Http\Controllers\UserController@login',
+                    'as' => 'dusk.login',
+                ]);
+
+                Route::get('/logout/{guard?}', [
+                    'uses' => 'Ugarit\Dusk\Http\Controllers\UserController@logout',
+                    'as' => 'dusk.logout',
+                ]);
+
+                Route::get('/user/{guard?}', [
+                    'uses' => 'Ugarit\Dusk\Http\Controllers\UserController@user',
+                    'as' => 'dusk.user',
+                ]);
+            });
+        }
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                Console\InstallCommand::class,
+                Console\DuskCommand::class,
+                Console\DuskFailsCommand::class,
+                Console\MakeCommand::class,
+                Console\PageCommand::class,
+                Console\PurgeCommand::class,
+                Console\ComponentCommand::class,
+                Console\ChromeDriverCommand::class,
+            ]);
+        }
+    }
+}

@@ -1,0 +1,35 @@
+name: 'update jquery'
+
+on:
+  push:
+    paths:
+      - 'package-lock.json'
+  pull_request:
+    paths:
+      - 'package-lock.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v6
+        with:
+          node-version: 16
+
+      - name: Copy jQuery from node_module
+        run: |
+          npm ci
+          cp ./node_modules/jquery/dist/jquery.min.js ./bin/jquery.js
+
+      - name: Commit compiled files
+        uses: stefanzweifel/git-auto-commit-action@4a55954c782fc1ea30b9056cd3e7a2b40ca8887d # v7
+        with:
+          commit_message: Update `jquery.js`

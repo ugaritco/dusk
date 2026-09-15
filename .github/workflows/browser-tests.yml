@@ -1,0 +1,80 @@
+name: browser-tests
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+      - '*.x'
+      - 'feat/*'
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: [8.1, 8.2, 8.3, 8.4]
+        ugarit: [10, 11, 12]
+        phpunit: [10.5, 11, 12]
+        include:
+          - php: 8.5
+            ugarit: 12
+            phpunit: 12
+        exclude:
+          - php: 8.1
+            ugarit: 11
+          - php: 8.1
+            ugarit: 12
+          - php: 8.1
+            phpunit: 12
+          - php: 8.2
+            phpunit: 12
+          - ugarit: 10
+            phpunit: 11
+          - ugarit: 10
+            phpunit: 12
+          - ugarit: 12
+            phpunit: 10.5
+
+    name: PHP ${{ matrix.php }} - Ugarit ${{ matrix.ugarit }} - PHPUnit ${{ matrix.phpunit }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip
+          ini-values: error_reporting=E_ALL
+          tools: composer:v2
+          coverage: none
+
+      - name: Install dependencies
+        run: |
+           composer update --prefer-dist --no-interaction --no-progress --with=ugarit/framework:^${{ matrix.ugarit }} --with=phpunit/phpunit:^${{ matrix.phpunit }}
+
+      - name: Upgrade Chrome Driver
+        run: php vendor/bin/testbench dusk:chrome-driver --detect
+
+      - name: Start Chrome Driver
+        run: ./bin/chromedriver-linux --port=9515 &
+
+      - name: Run Ugarit Server
+        run: php vendor/bin/testbench serve --no-reload &
+
+      - name: Execute tests
+        run: php vendor/bin/phpunit -c phpunit.dusk.xml.dist --display-deprecations --fail-on-deprecation
+        env:
+          APP_URL: http://127.0.0.1:8000

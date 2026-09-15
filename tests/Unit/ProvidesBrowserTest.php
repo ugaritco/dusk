@@ -1,0 +1,83 @@
+<?php
+
+namespace Ugarit\Dusk\Tests\Unit;
+
+use Ugarit\Dusk\Concerns\ProvidesBrowser;
+use Mockery as m;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
+use stdClass;
+
+class ProvidesBrowserTest extends TestCase
+{
+    use ProvidesBrowser;
+
+    protected function tearDown(): void
+    {
+        m::close();
+    }
+
+    public function test_capture_failures_for()
+    {
+        $browser = m::mock(stdClass::class);
+        $browser->shouldReceive('screenshot')->with(
+            'failure-Ugarit_Dusk_Tests_Unit_ProvidesBrowserTest_test_capture_failures_for-0'
+        );
+        $browsers = collect([$browser]);
+
+        $this->captureFailuresFor($browsers);
+    }
+
+    #[DataProvider('data')]
+    public function test_capture_failures_for_data($data)
+    {
+        $browser = m::mock(stdClass::class);
+        $browser->shouldReceive('screenshot')->with(
+            sprintf('failure-Ugarit_Dusk_Tests_Unit_ProvidesBrowserTest_test_capture_failures_for_data_%s-0', $data)
+        );
+        $browsers = collect([$browser]);
+
+        $this->captureFailuresFor($browsers);
+    }
+
+    #[DataProvider('data')]
+    public function test_store_console_logs_for_data($data)
+    {
+        $browser = m::mock(stdClass::class);
+        $browser->shouldReceive('storeConsoleLog')->with(
+            sprintf('Ugarit_Dusk_Tests_Unit_ProvidesBrowserTest_test_store_console_logs_for_data_%s-0', $data)
+        );
+        $browsers = collect([$browser]);
+
+        $this->storeConsoleLogsFor($browsers);
+    }
+
+    #[DataProvider('data')]
+    public function test_truncate_test_name_where_that_name_is_really_really_really_too_long_and_might_cause_issues_data($data)
+    {
+        $browser = m::mock(stdClass::class);
+        $browser->shouldReceive('storeConsoleLog')->with(
+            sprintf(
+                'Dusk_Tests_Unit_ProvidesBrowserTest_test_truncate_test_name_where_that_name_is_really_really_really_too_long_and_might_cause_issues_data_%s-0',
+                $data
+            )
+        );
+        $browsers = collect([$browser]);
+
+        $this->storeConsoleLogsFor($browsers);
+    }
+
+    public static function data()
+    {
+        return [
+            'foo' => ['foo'],
+        ];
+    }
+
+    /**
+     * Implementation of abstract ProvidesBrowser::driver().
+     */
+    protected function driver()
+    {
+    }
+}

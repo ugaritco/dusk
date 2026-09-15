@@ -1,0 +1,368 @@
+<?php
+
+namespace Ugarit\Dusk\Tests\Unit;
+
+use Facebook\WebDriver\Remote\RemoteKeyboard;
+use Facebook\WebDriver\Remote\RemoteWebDriver;
+use Facebook\WebDriver\Remote\RemoteWebElement;
+use Facebook\WebDriver\Remote\WebDriverBrowserType;
+use Facebook\WebDriver\WebDriverBy;
+use Facebook\WebDriver\WebDriverKeys;
+use Ugarit\Dusk\Browser;
+use Ugarit\Dusk\Keyboard;
+use Ugarit\Dusk\Page;
+use Mockery as m;
+use PHPUnit\Framework\TestCase;
+use stdClass;
+
+class BrowserTest extends TestCase
+{
+    /** @var \Mockery\MockInterface */
+    private $driver;
+
+    /** @var Browser */
+    private $browser;
+
+    protected function setUp(): void
+    {
+        $this->driver = m::mock(stdClass::class);
+
+        $this->browser = new Browser($this->driver);
+    }
+
+    protected function tearDown(): void
+    {
+        m::close();
+    }
+
+    public function test_visit()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('http://ugarit.dev/login');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->visit('/login');
+    }
+
+    public function test_blank_page()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('about:blank');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->blank();
+    }
+
+    public function test_visit_with_page_object()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('http://ugarit.dev/login');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->visit($page = new BrowserTestPage);
+
+        $this->assertEquals(['@modal' => '#modal'], $browser->resolver->elements);
+        $this->assertEquals($page, $browser->page);
+        $this->assertTrue($page->asserted);
+    }
+
+    public function test_on_method_sets_current_page()
+    {
+        $driver = m::mock(stdClass::class);
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->on($page = new BrowserTestPage);
+
+        $this->assertEquals(['@modal' => '#modal'], $browser->resolver->elements);
+        $this->assertEquals($page, $browser->page);
+        $this->assertTrue($page->asserted);
+    }
+
+    public function test_refresh_method()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->refresh')->once();
+        $browser = new Browser($driver);
+
+        $browser->refresh();
+    }
+
+    public function test_with_method()
+    {
+        $driver = m::mock(stdClass::class);
+        $browser = new Browser($driver);
+
+        $browser->with('prefix', function ($browser) {
+            $this->assertInstanceof(Browser::class, $browser);
+            $this->assertSame('body prefix', $browser->resolver->prefix);
+        });
+    }
+
+    public function test_with_method_with_page()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('http://ugarit.dev/login');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->visit($page = new BrowserTestPage);
+
+        $page->asserted = false;
+
+        $browser->with('prefix', function ($browser) use ($page) {
+            $this->assertInstanceof(Browser::class, $browser);
+            $this->assertSame('body prefix', $browser->resolver->prefix);
+            $this->assertEquals($page, $browser->page);
+            $this->assertFalse($page->asserted);
+        });
+    }
+
+    public function test_within_method()
+    {
+        $driver = m::mock(stdClass::class);
+        $browser = new Browser($driver);
+
+        $browser->within('prefix', function ($browser) {
+            $this->assertInstanceof(Browser::class, $browser);
+            $this->assertSame('body prefix', $browser->resolver->prefix);
+        });
+    }
+
+    public function test_within_method_with_page()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('http://ugarit.dev/login');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->visit($page = new BrowserTestPage);
+
+        $page->asserted = false;
+
+        $browser->within('prefix', function ($browser) use ($page) {
+            $this->assertInstanceof(Browser::class, $browser);
+            $this->assertSame('body prefix', $browser->resolver->prefix);
+            $this->assertEquals($page, $browser->page);
+            $this->assertFalse($page->asserted);
+        });
+    }
+
+    public function test_elsewhere_method()
+    {
+        $driver = m::mock(stdClass::class);
+        $browser = new Browser($driver);
+
+        $browser->with('prefix', function ($browser) {
+            $browser->elsewhere('.my-class', function ($browser) {
+                $this->assertInstanceof(Browser::class, $browser);
+                $this->assertSame('body .my-class', $browser->resolver->prefix);
+            });
+        });
+    }
+
+    public function test_page_macros()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('navigate->to')->with('http://ugarit.dev/login');
+        $browser = new Browser($driver);
+        Browser::$baseUrl = 'http://ugarit.dev';
+
+        $browser->visit($page = new BrowserTestPage);
+        $browser->doSomething();
+
+        $this->assertTrue($browser->page->macroed);
+    }
+
+    public function test_retrieve_console()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('manage->getLog')->with('browser')->andReturnNull();
+        $driver->shouldReceive('getCapabilities->getBrowserName')->andReturn(WebDriverBrowserType::CHROME);
+        $browser = new Browser($driver);
+        Browser::$storeConsoleLogAt = 'not-null';
+
+        $browser->storeConsoleLog('file');
+    }
+
+    public function test_disable_console()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldNotReceive('manage');
+        $driver->shouldReceive('getCapabilities->getBrowserName')->andReturnNull();
+        $browser = new Browser($driver);
+
+        $browser->storeConsoleLog('file');
+    }
+
+    public function test_uses_keyboard()
+    {
+        $driver = m::mock(stdClass::class);
+        $remoteKeyboard = m::mock(RemoteKeyboard::class);
+        $driver->shouldReceive('getKeyboard')->once()->andReturn($remoteKeyboard);
+        $remoteKeyboard->shouldReceive('pressKey')->once()->with(WebDriverKeys::CONTROL)->andReturnNull();
+        $browser = new Browser($driver);
+
+        $browser->withKeyboard(function ($keyboard) use ($browser) {
+            $this->assertInstanceof(Keyboard::class, $keyboard);
+            $this->assertSame($browser, $keyboard->browser);
+
+            $keyboard->press(WebDriverKeys::CONTROL);
+        });
+    }
+
+    public function test_screenshot()
+    {
+        $this->driver->shouldReceive('takeScreenshot')->andReturnUsing(function ($filePath) {
+            touch($filePath);
+        });
+
+        Browser::$storeScreenshotsAt = sys_get_temp_dir();
+
+        $this->browser->screenshot(
+            $name = 'screenshot-01'
+        );
+
+        $this->assertFileExists(Browser::$storeScreenshotsAt.'/'.$name.'.png');
+    }
+
+    public function test_screenshot_in_subdirectory()
+    {
+        $this->driver->shouldReceive('takeScreenshot')->andReturnUsing(function ($filePath) {
+            touch($filePath);
+        });
+
+        Browser::$storeScreenshotsAt = sys_get_temp_dir();
+
+        $this->browser->screenshot(
+            $name = uniqid('random').'/sub/dir/screenshot-01'
+        );
+
+        $this->assertFileExists(Browser::$storeScreenshotsAt.'/'.$name.'.png');
+    }
+
+    public function test_screenshot_element()
+    {
+        $elementMock = $this->createMock(RemoteWebElement::class);
+        $elementMock->expects($this->once())
+            ->method('takeElementScreenshot')
+            ->willReturnCallback(function ($filePath) {
+                return touch($filePath);
+            });
+
+        $driverMock = $this->createMock(RemoteWebDriver::class);
+        $driverMock->expects($this->once())
+            ->method('findElement')
+            ->with(WebDriverBy::cssSelector('body #selector'))
+            ->willReturn($elementMock);
+
+        $browser = new Browser($driverMock);
+
+        $browser::$storeScreenshotsAt = sys_get_temp_dir();
+
+        $browser->screenshotElement(
+            '#selector',
+            $name = 'screenshot-01',
+        );
+
+        $this->assertFileExists(Browser::$storeScreenshotsAt.'/'.$name.'.png');
+    }
+
+    public function test_screenshot_element_in_subdirectory()
+    {
+        $elementMock = $this->createMock(RemoteWebElement::class);
+        $elementMock->expects($this->once())
+            ->method('takeElementScreenshot')
+            ->willReturnCallback(function ($filePath) {
+                return touch($filePath);
+            });
+
+        $driverMock = $this->createMock(RemoteWebDriver::class);
+        $driverMock->expects($this->once())
+            ->method('findElement')
+            ->with(WebDriverBy::cssSelector('body #selector'))
+            ->willReturn($elementMock);
+
+        $browser = new Browser($driverMock);
+
+        $browser::$storeScreenshotsAt = sys_get_temp_dir();
+
+        $browser->screenshotElement(
+            '#selector',
+            $name = uniqid('random').'/sub/dir/screenshot-01',
+        );
+
+        $this->assertFileExists(Browser::$storeScreenshotsAt.'/'.$name.'.png');
+    }
+
+    public function test_can_disable_fit_on_failure()
+    {
+        $this->browser->fitOnFailure = true;
+        $this->browser->disableFitOnFailure();
+
+        $this->assertFalse($this->browser->fitOnFailure);
+    }
+
+    public function test_can_enable_fit_on_failure()
+    {
+        $this->browser->fitOnFailure = false;
+        $this->browser->enableFitOnFailure();
+
+        $this->assertTrue($this->browser->fitOnFailure);
+    }
+
+    public function test_ignores_favicon_console_messages()
+    {
+        $driver = m::mock(stdClass::class);
+        $driver->shouldReceive('manage->getLog')->with('browser')->andReturn([
+            ['message' => 'https://example.com/favicon.ico - Failed to load resource: the server responded with a status of 404 ()', 'level' => 'SEVERE'],
+        ]);
+        $driver->shouldReceive('getCapabilities->getBrowserName')->andReturn(WebDriverBrowserType::CHROME);
+        $browser = new Browser($driver);
+        Browser::$storeConsoleLogAt = sys_get_temp_dir();
+
+        $browser->storeConsoleLog('ignore-test');
+
+        $this->assertFileDoesNotExist(sys_get_temp_dir().'/ignore-test.log');
+    }
+
+    public function test_source_code_can_be_stored()
+    {
+        $this->driver->shouldReceive('getPageSource')->andReturn('source content');
+        Browser::$storeSourceAt = sys_get_temp_dir();
+        $this->browser->storeSource(
+            $name = 'screenshot-01'
+        );
+        $this->assertFileExists(Browser::$storeSourceAt.'/'.$name.'.txt');
+        $this->assertStringEqualsFile(Browser::$storeSourceAt.'/'.$name.'.txt', 'source content');
+    }
+}
+
+class BrowserTestPage extends Page
+{
+    public $asserted = false;
+    public $macroed = false;
+
+    public function assert(Browser $browser)
+    {
+        $this->asserted = true;
+    }
+
+    public function url()
+    {
+        return '/login';
+    }
+
+    public function doSomething()
+    {
+        $this->macroed = true;
+    }
+
+    public static function siteElements()
+    {
+        return ['@modal' => '#modal'];
+    }
+}
